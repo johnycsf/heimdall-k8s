@@ -1,32 +1,29 @@
 # heimdall-k8s
 
-![Repobeats analytics image](https://repobeats.axiom.co/api/embed/bc9a5953ce99f544324924618df9438258cb6ec2.svg "Repobeats analytics image")
-
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/johnycsf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Issues](https://img.shields.io/badge/issues-welcome-lightgrey.svg)](../../issues/new/choose)
 
-Deploy [Heimdall](https://heimdall.site/) on a [Kubernetes](https://kubernetes.io/) homelab with almost no Kubernetes knowledge.
+Heimdall on Kubernetes for homelab beginners — official PHP image, backup-before-update.
+
+![`./manage.sh` control center](docs/manage-demo.gif)
+
+## Install
+
+```bash
+git clone https://github.com/johnycsf/heimdall-k8s.git
+cd heimdall-k8s
+chmod +x manage.sh
+./manage.sh
+```
+
+`./manage.sh` opens a **↑/↓ menu** with a `>` cursor (j/k and Enter also work). It asks for **StorageClass** and **replica count** (with a safe per-app suggestion). Re-run later to change those choices. Non-interactive: `STORAGE_CLASS=longhorn REPLICAS=1 ./manage.sh`.
+
+Uses the **official** [`php:8.4-apache`](https://hub.docker.com/_/php) image and builds Heimdall from the [upstream release](https://github.com/linuxserver/Heimdall/releases) via the `Dockerfile` in this repo (no LinuxServer container runtime). `install.sh` builds `heimdall:local` and loads it into k3s/kind when those tools are present.
 
 Docker Compose version (no Kubernetes needed): [heimdall-docker](https://github.com/johnycsf/heimdall-docker)
 
-Heimdall is a simple application dashboard — a start page for links to the rest of your self-hosted apps (Nextcloud, Vaultwarden, etc.).
-
-Uses the **official** [`php:8.4-apache`](https://hub.docker.com/_/php) image and builds Heimdall from the [upstream release](https://github.com/linuxserver/Heimdall/releases) via the `Dockerfile` in this repo (no LinuxServer container runtime).
-
-`install.sh` builds `heimdall:local` and loads it into k3s/kind when those tools are present.
-
 > **Updating an older clone?** Pulling git is safe. Re-running `./manage.sh` against a LinuxServer Deployment is not. Read [BREAKING-CHANGES.md](BREAKING-CHANGES.md).
-
-**Heimdall on Kubernetes** — official PHP image build, StorageClass prompts, safe updates & backups.
-
-> **Choose your path:** [Docker Compose](https://github.com/johnycsf/heimdall-docker) · **Kubernetes (this repo)**
-
-## Who this is for
-
-**Good fit:** k3s/homelab clusters that want a lightweight app dashboard.
-
-**Not for:** reusing LinuxServer config volumes — fresh install path only (see BREAKING-CHANGES).
 
 ## Why this repo (not just another manifest dump)
 
@@ -38,27 +35,11 @@ Uses the **official** [`php:8.4-apache`](https://hub.docker.com/_/php) image and
 - Incremental hardlink **`./manage.sh backup`** + restore
 - **Official upstream images only**
 
-## Support this work
-
-**If this project helped you — or saved you hours of setup — please consider [sponsoring or donating](https://github.com/sponsors/johnycsf).** These repos stay free and maintained because people like you chip in.
-
-Your sponsorship funds:
-
-- Keeping install, update, and backup scripts working across common Linux distros (and macOS where supported)
-- Testing safe upgrades against **official** upstream images before you run them
-- Building more beginner-friendly homelab stacks with the same `./manage.sh` experience
-
-[![Sponsor johnycsf](https://img.shields.io/badge/GitHub%20Sponsors-Donate-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/johnycsf)
-
-👉 **[github.com/sponsors/johnycsf](https://github.com/sponsors/johnycsf)** — even a small monthly sponsorship helps keep development going.
-
 ## What you need
 
 - A Kubernetes cluster (`kubectl` context already set)
 - `sudo` on this machine so `./manage.sh` can install missing tools (kubectl, helm, curl, openssl, rsync, …)
 - Disk for PersistentVolumes
-
-`./manage.sh` is interactive (colors + step progress). It asks for **StorageClass** and **replica count** (with a safe per-app suggestion). Re-run it later to change those choices. Non-interactive: `STORAGE_CLASS=longhorn REPLICAS=1 ./manage.sh`.
 
 ## One-time: install Longhorn
 
@@ -71,24 +52,8 @@ helm install longhorn longhorn/longhorn \
 kubectl -n longhorn-system get pod
 ```
 
-Wait until the Longhorn pods are `Running` / `Ready`.  
+Wait until the Longhorn pods are `Running` / `Ready`.
 Longhorn will **automatically** create the Heimdall volume from the PVC — you do not need to create volumes by hand in the Longhorn UI.
-
-## Interactive control center
-
-`./manage.sh` opens a simple **↑/↓ menu** with a `>` cursor (j/k and Enter also work). No extra packages required.
-
-## Install Heimdall
-
-```bash
-git clone https://github.com/johnycsf/heimdall-k8s.git
-cd heimdall-k8s
-chmod +x manage.sh
-./manage.sh          # interactive control center
-# or: ./manage.sh
-```
-
-Liked the install? Star the repo or [sponsor johnycsf](https://github.com/sponsors/johnycsf) so more stacks stay maintained.
 
 ## Open the dashboard
 
@@ -123,21 +88,11 @@ Keep the stack current (safe while pods are running; brief rollout downtime):
 
 Before changing anything, the script runs `./manage.sh backup` into `./backups` (incremental, database-safe). After a successful update it asks whether to **keep** or **delete** that snapshot, and how many local copies to retain (older ones are pruned). Copy important backups to an external drive, NAS, or cloud so they do not fill this disk.
 
-To roll back later (same tool as disaster recovery):
-
-```bash
-./manage.sh backup --restore --from ./backups
-# or from an external copy:
-./manage.sh backup --restore --from /mnt/usb/my-backups
-```
-
-Older `backups/update-*` tarball folders (from previous script versions) are no longer used by `./manage.sh update`; use each folder's `RESTORE.txt` if you still need one, or delete them to free space.
-
 This re-applies manifests, rolls Deployments so `:latest` images refresh, and prunes **unused** images on this machine when possible (k3s `crictl rmi --prune` or Docker dangling prune). PVCs and Secrets are left untouched.
 
 Only for clusters already on `heimdall:local` — see [BREAKING-CHANGES.md](BREAKING-CHANGES.md).
 
-## Disaster recovery (full backup / restore)
+## Backup and restore
 
 Incremental snapshots via `rsync` hardlinks (unchanged files are not re-copied). `./manage.sh update` uses this same `backup.sh` before updating (into `./backups`).
 
@@ -148,7 +103,8 @@ Incremental snapshots via `rsync` hardlinks (unchanged files are not re-copied).
 
 # On a brand-new machine/cluster after ./manage.sh:
 ./manage.sh backup --restore --from /mnt/usb/heimdall-k8s-backups
-# or a specific snapshot:
+# or a local snapshot tree / specific snapshot:
+./manage.sh backup --restore --from ./backups
 ./manage.sh backup --restore --from /mnt/usb/heimdall-k8s-backups/snapshots/YYYYMMDD-HHMMSS
 ```
 
@@ -158,13 +114,15 @@ Keep the backup root on **one filesystem** so hardlinks work. Prefer an external
 
 **Database safety:** Nextcloud uses a verified MariaDB *logical* dump (`mariadb-dump --single-transaction`) — the live `data/db` / DB PVC files are never rsync'd. SQLite apps (Heimdall, Vaultwarden) are stopped or scaled to 0, WAL-checkpointed when `sqlite3` is available, integrity-checked, then copied. Incremental hardlinks apply to file trees; each SQL dump is a full verified file with a SHA-256 in `META.txt`.
 
+Older `backups/update-*` tarball folders (from previous script versions) are no longer used by `./manage.sh update`; use each folder's `RESTORE.txt` if you still need one, or delete them to free space.
+
 ## Uninstall
 
 ```bash
 kubectl delete -f deploy.yaml
 ```
 
-This also deletes the PVC and the Longhorn volume data.
+This also deletes the PVC and the Longhorn volume data. Or use **Uninstall** in `./manage.sh`.
 
 ## Notes for beginners
 
@@ -172,6 +130,10 @@ This also deletes the PVC and the Longhorn volume data.
 - Fresh install only — do not reuse a LinuxServer `/config` volume with this image.
 - Multi-node clusters: push `heimdall:local` to a registry you control and update `image` / `imagePullPolicy` in `deploy.yaml`.
 - Put Heimdall behind a reverse proxy (Traefik, nginx, Caddy) if you expose it outside your LAN.
+
+## Backup exports
+
+Local snapshots stay as incremental hardlink trees (fast rollback). Optionally create a compressed offsite copy with `./manage.sh backup --dest ./backups --archive tar.gz|tar.xz|zip` (add `--archive-password` for zip password or age-passphrase on tar). For stronger key-based encryption use `--encrypt` (age). See repo-framework `docs/BACKUP_ENCRYPTION.md`.
 
 ## Credits
 
@@ -185,10 +147,8 @@ This project is provided **as is**. The author is **not responsible** for any lo
 
 If you hit an error, please [open a GitHub Issue](../../issues/new/choose) and follow [CONTRIBUTING.md](CONTRIBUTING.md). Fixes via Pull Request are welcome. GitHub Issues/PRs are the supported way to report problems—there is no private support channel.
 
-## Backup exports
-
-Local snapshots stay as incremental hardlink trees (fast rollback). Optionally create a compressed offsite copy with `./manage.sh backup --dest ./backups --archive tar.gz|tar.xz|zip` (add `--archive-password` for zip password or age-passphrase on tar). For stronger key-based encryption use `--encrypt` (age). See repo-framework `docs/BACKUP_ENCRYPTION.md`.
-
 ## Security
 
 See [SECURITY.md](SECURITY.md) for how to report vulnerabilities.
+
+Sponsorship funds testing and maintenance: [github.com/sponsors/johnycsf](https://github.com/sponsors/johnycsf).

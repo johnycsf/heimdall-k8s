@@ -1,5 +1,7 @@
 ## Unreleased
 
+- README leads with the `./manage.sh` control-center demo GIF and a one-line pitch; sponsor sales copy is reduced to a header badge plus one closing line.
+
 - Manage menu includes **Restore** (backup root, snapshot, or archive).
 
 - Single entrypoint: `./manage.sh` (install/update/backup helpers moved under `scripts/`).
