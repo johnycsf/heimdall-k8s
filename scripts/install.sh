@@ -12,7 +12,7 @@ ui_banner "Heimdall" "Kubernetes - storage + replicas chosen interactively"
 ui_steps_init 6
 
 ui_step "Checking host dependencies"
-ensure_host_deps heimdall-k8s sqlite3
+ensure_host_deps heimdall-k8s sqlite3 age zip unzip xz
 
 ui_step "StorageClass"
 configure_k8s_storage
